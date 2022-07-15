@@ -22,26 +22,26 @@ from utils import accuracy, fgsm
 def load_dataset(args):
     if args.data == "mnist":
         train_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(os.path.expanduser("~/.torch/data/mnist"), train=True, download=True,
+            datasets.MNIST(os.path.expanduser("data/mnist"), train=True, download=True,
                            transform=transforms.Compose([
                                transforms.ToTensor()])),
-            batch_size=128, shuffle=True)
+            batch_size=args.batch, shuffle=True)
         test_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(os.path.expanduser("~/.torch/data/mnist"), train=False, download=False,
+            datasets.MNIST(os.path.expanduser("data/mnist"), train=False, download=False,
                            transform=transforms.Compose([
                                transforms.ToTensor()])),
-            batch_size=128, shuffle=False)
+            batch_size=args.batch, shuffle=False)
     elif args.data == "cifar":
         train_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR10(os.path.expanduser("~/.torch/data/cifar10"), train=True, download=True,
+            datasets.CIFAR10(os.path.expanduser("data/cifar10"), train=True, download=True,
                              transform=transforms.Compose([
                                  transforms.ToTensor()])),
-            batch_size=128, shuffle=True)
+            batch_size=args.batch, shuffle=True)
         test_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR10(os.path.expanduser("~/.torch/data/cifar10"), train=False, download=False,
+            datasets.CIFAR10(os.path.expanduser("data/cifar10"), train=False, download=False,
                              transform=transforms.Compose([
                                  transforms.ToTensor()])),
-            batch_size=128, shuffle=False)
+            batch_size=args.batch, shuffle=False)
     return train_loader, test_loader
 
 
@@ -59,10 +59,11 @@ def main(args):
     train_loader, test_loader = load_dataset(args)
     CNN = load_cnn(args)
     model = CNN().cuda()
+    model = torch.nn.DataParallel(model)
     cudnn.benchmark = True
 
-    opt = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.001)
-    scheduler = lr_scheduler.MultiStepLR(opt, milestones=args.milestones, gamma=args.gamma)
+    optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=0.9, weight_decay=0.001)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
     loss_func = nn.CrossEntropyLoss().cuda()
 
     epochs = args.epochs
@@ -77,10 +78,10 @@ def main(args):
             x, t = Variable(x.cuda()), Variable(t.cuda())
             y = model(x)
             loss = loss_func(y, t)
-            opt.zero_grad()
+            optimizer.zero_grad()
             loss.backward()
-            opt.step()
-            train_loss += loss.data[0] * t.size(0)
+            optimizer.step()
+            train_loss += loss * t.size(0)
             train_acc += accuracy(y, t)
             train_n += t.size(0)
 
@@ -90,7 +91,7 @@ def main(args):
             y = model(x)
             loss = loss_func(y, t)
 
-            test_loss += loss.data[0] * t.size(0)
+            test_loss += loss.data * t.size(0)
             test_acc += accuracy(y, t)
             test_n += t.size(0)
         scheduler.step()
@@ -127,11 +128,12 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data", type=str, default="mnist")
+    parser.add_argument("--data", type=str, default="cifar")
     parser.add_argument("--epochs", type=int, default=100)
     parser.add_argument("--lr", type=float, default=0.01)
     parser.add_argument("--milestones", type=list, default=[50, 75])
     parser.add_argument("--gamma", type=float, default=0.1)
     parser.add_argument("--eps", type=float, default=0.15)
+    parser.add_argument("--batch", type=int, default=128)
     args = parser.parse_args()
     main(args)

@@ -19,13 +19,13 @@ from utils import fgsm, accuracy
 def load_dataset(args):
     if args.data == "mnist":
         test_loader = torch.utils.data.DataLoader(
-            datasets.MNIST(os.path.expanduser("~/.torch/data/mnist"), train=False, download=False,
+            datasets.MNIST(os.path.expanduser("data/mnist"), train=False, download=False,
                            transform=transforms.Compose([
                                transforms.ToTensor()])),
             batch_size=128, shuffle=False)
     elif args.data == "cifar":
         test_loader = torch.utils.data.DataLoader(
-            datasets.CIFAR10(os.path.expanduser("~/.torch/data/cifar10"), train=False, download=False,
+            datasets.CIFAR10(os.path.expanduser("data/cifar10"), train=False, download=False,
                              transform=transforms.Compose([
                                  transforms.ToTensor()])),
             batch_size=128, shuffle=False)
@@ -49,6 +49,7 @@ def main(args):
     CNN = load_cnn(args)
 
     model = CNN().cuda()
+    model = nn.DataParallel(model)
     model.load_state_dict(model_point["state_dict"])
 
     in_ch = 1 if args.data == "mnist" else 3

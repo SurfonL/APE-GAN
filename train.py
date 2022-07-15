@@ -38,7 +38,7 @@ def show_images(e, x, x_adv, x_fake, save_dir):
 def main(args):
     lr = args.lr
     epochs = args.epochs
-    batch_size = 128
+    batch_size = 1280
     xi1, xi2 = args.xi1, args.xi2
 
     check_path = args.checkpoint
@@ -95,8 +95,8 @@ def main(args):
                 loss_G.backward()
                 opt_G.step()
 
-            gen_loss += loss_D.data[0] * x.size(0)
-            dis_loss += loss_G.data[0] * x.size(0)
+            gen_loss += loss_D.data * x.size(0)
+            dis_loss += loss_G.data * x.size(0)
             n += x.size(0)
         print(print_str.format(e, gen_loss / n, dis_loss / n))
         torch.save({"generator": G.state_dict(), "discriminator": D.state_dict()},
