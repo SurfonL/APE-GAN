@@ -14,6 +14,7 @@ from tqdm import tqdm
 import matplotlib.pyplot as plt
 
 from models import Generator, Discriminator
+from models import MnistCNN, CifarCNN
 
 
 def show_images(e, x, x_adv, x_fake, save_dir):
@@ -61,15 +62,29 @@ def main(args):
     loss_mse = nn.MSELoss()
     cudnn.benchmark = True
 
+
+    #the model
+    CNN = CifarCNN()
+    model = CNN().cuda()
+    model = nn.DataParallel(model)
+    model_point = torch.load("cnn.tar")
+    model.load_state_dict(model_point["state_dict"])
+    for p in model.parameters():
+        p.requires_grad = False
+
+
     print_str = "\t".join(["{}"] + ["{:.6f}"] * 2)
     print("\t".join(["{:}"] * 3).format("Epoch", "Gen_Loss", "Dis_Loss"))
     for e in range(epochs):
+        x_real = torch.normal(mean = torch.rand(1)*100,std = torch.rand(1)*100, )
+
         G.eval()
         x_fake = G(Variable(x_adv_tmp.cuda())).data
         show_images(e, x_tmp, x_adv_tmp, x_fake, check_path)
         G.train()
         gen_loss, dis_loss, n = 0, 0, 0
         for x, x_adv in tqdm(train_loader, total=len(train_loader), leave=False):
+            
             current_size = x.size(0)
             x, x_adv = Variable(x.cuda()), Variable(x_adv.cuda())
             # Train D

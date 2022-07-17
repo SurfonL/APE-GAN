@@ -68,8 +68,8 @@ class Generator(nn.Module):
     def forward(self, x):
         h = F.leaky_relu(self.bn1(self.conv1(x)))
         h = F.leaky_relu(self.bn2(self.conv2(h)))
-        h = F.leaky_relu(self.bn3(self.deconv3(h)))
-        h = F.tanh(self.deconv4(h))
+        h = self.bn3(self.deconv3(h))
+        h = F.sigmoid(self.deconv4(h))
         return h
 
 

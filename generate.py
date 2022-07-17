@@ -20,27 +20,34 @@ from utils import accuracy, fgsm
 
 
 def load_dataset(args):
+    transform_train = transforms.Compose([
+        transforms.RandomCrop(32, padding=4),
+        transforms.RandomHorizontalFlip(),
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+    transform_test = transforms.Compose([
+        transforms.ToTensor(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ])
+
     if args.data == "mnist":
         train_loader = torch.utils.data.DataLoader(
             datasets.MNIST(os.path.expanduser("data/mnist"), train=True, download=True,
-                           transform=transforms.Compose([
-                               transforms.ToTensor()])),
+                           transform=transform_train),
             batch_size=args.batch, shuffle=True)
         test_loader = torch.utils.data.DataLoader(
             datasets.MNIST(os.path.expanduser("data/mnist"), train=False, download=False,
-                           transform=transforms.Compose([
-                               transforms.ToTensor()])),
+                           transform=transform_test),
             batch_size=args.batch, shuffle=False)
     elif args.data == "cifar":
         train_loader = torch.utils.data.DataLoader(
             datasets.CIFAR10(os.path.expanduser("data/cifar10"), train=True, download=True,
-                             transform=transforms.Compose([
-                                 transforms.ToTensor()])),
+                             transform=transform_train),
             batch_size=args.batch, shuffle=True)
         test_loader = torch.utils.data.DataLoader(
             datasets.CIFAR10(os.path.expanduser("data/cifar10"), train=False, download=False,
-                             transform=transforms.Compose([
-                                 transforms.ToTensor()])),
+                             transform=transform_test),
             batch_size=args.batch, shuffle=False)
     return train_loader, test_loader
 
@@ -130,7 +137,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", type=str, default="cifar")
     parser.add_argument("--epochs", type=int, default=100)
-    parser.add_argument("--lr", type=float, default=0.01)
+    parser.add_argument("--lr", type=float, default=0.005)
     parser.add_argument("--milestones", type=list, default=[50, 75])
     parser.add_argument("--gamma", type=float, default=0.1)
     parser.add_argument("--eps", type=float, default=0.15)
